@@ -3,6 +3,10 @@ const Genre = require("../models/genre");
 const Book = require("../models/book");
 const async = require("async");
 
+const validator = require("express-validator");
+const body = validator.body;
+const validationResult = validator.validationResult;
+
 // Display list of all Genre.
 exports.genre_list = function (req, res, next) {
   Genre.find()
@@ -53,14 +57,55 @@ exports.genre_detail = (req, res, next) => {
 };
 
 // Display Genre create form on GET.
-exports.genre_create_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre create GET");
+exports.genre_create_get = (req, res, next) => {
+  res.render("genre_form", { title: "Create Genre" });
 };
 
 // Handle Genre create on POST.
-exports.genre_create_post = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre create POST");
-};
+//  The reason we use array is bc we need two middleware functions
+// First one to validate data, second to do normal operations
+exports.genre_create_post = [
+  //  Validate and sanitize name field    //
+  //  trim removes whitespace trailing/leading whitespace
+  //  islength verifies not empty
+  //  escape removes dangerous html characters (ex. convert '<' to ;gt)
+  body("name", "Genre name required").trim().isLength({ min: 1 }).escape(),
+  //  Process request now that field is validated
+  (req, res, next) => {
+    //  Extract validation errors
+    const errors = validationResult(req);
+    //  Create Genre object w/ formatted input
+    const genre = new Genre({ name: req.body.name });
+    if (!errors.isEmpty()) {
+      //  Errors, rerender form reusing valid inputs and throwing error for bad
+      res.render("genre_form", {
+        title: "Create Genre",
+        genre,
+        errors: errors.array(),
+      });
+      return;
+    } else {
+      //  Data from form is valid, now check if given genre already exists
+      Genre.findOne({ name: req.body.name }).exec((err, found_genre) => {
+        if (err) {
+          return next(err);
+        }
+        if (found_genre) {
+          //  Genre exists, redirect to its page
+          res.redirect(found_genre.url);
+        } else {
+          genre.save((err) => {
+            if (err) {
+              return next(err);
+            }
+          });
+          //  Genre saved successfuly, redirect to its page
+          res.redirect(genre.url);
+        }
+      });
+    }
+  },
+];
 
 // Display Genre delete form on GET.
 exports.genre_delete_get = (req, res) => {
