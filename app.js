@@ -8,14 +8,16 @@ var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 const catalogRouter = require("./routes/catalog");
 //Import routes for "catalog" area of site ^^^^
+require("dotenv").config();
 
 var app = express();
 
 //  Set up mongoose conection
 const mongoose = require("mongoose");
-const mongoDB =
-  "mongodb+srv://admin:amongbruh@cluster0.sbcocpn.mongodb.net/local_library?retryWrites=true&w=majority";
-mongoose.connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.mongodb_link, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MonogDB Connection Error:"));
 
